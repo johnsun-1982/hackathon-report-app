@@ -73,15 +73,63 @@ this document provides a systematic approach to managing changes in the report s
    - security review (if applicable)
 
 ### step 4: implementation
-1. **development**
-   - implement changes
-   - unit testing
-   - code review
 
-2. **integration testing**
-   - test affected reports
-   - validate data consistency
-   - performance testing
+#### 4.1: pre-change validation
+1. **compilation check**
+   - run full project compilation: `./gradlew compileJava`
+   - verify no compilation errors or warnings
+   - check all affected modules compile successfully
+   - validate dependency resolution
+
+2. **unit testing**
+   - run all unit tests: `./gradlew test`
+   - ensure 100% test pass rate
+   - validate test coverage meets requirements
+   - check no regression in existing functionality
+
+3. **change proposal**
+   - document all planned modifications in detail
+   - identify affected components and dependencies
+   - assess risk level and impact scope
+   - **require explicit user approval before proceeding**
+
+4. **approval workflow**
+   - present change proposal to user for review
+   - wait for explicit confirmation/approval
+   - document approval decision and timestamp
+   - only proceed with implementation after approval
+
+#### 4.2: development (after approval)
+1. **implementation**
+   - implement approved changes only
+   - follow coding standards and best practices
+   - make incremental changes with frequent commits
+   - update documentation simultaneously
+
+2. **unit testing**
+   - write comprehensive unit tests for new code
+   - run tests after each significant change
+   - ensure all edge cases are covered
+   - maintain test coverage above 80%
+
+3. **code review**
+   - self-review code for quality and standards
+   - check for security vulnerabilities
+   - validate performance implications
+   - ensure documentation is complete
+
+#### 4.3: integration testing
+1. **system integration**
+   - test affected reports end-to-end
+   - validate data consistency across modules
+   - check API compatibility
+   - test user workflows
+
+2. **performance testing**
+   - measure performance impact of changes
+   - compare against baseline metrics
+   - validate memory and CPU usage
+   - test under load conditions
 
 ### step 5: deployment
 1. **pre-deployment checks**
@@ -453,6 +501,79 @@ groups:
 - best practice documentation
 - tooling enhancements
 
+## code modification workflow
+
+### mandatory pre-change validation
+
+#### 1. compilation verification
+- **required command**: `./gradlew compileJava`
+- **success criteria**: zero compilation errors, zero warnings
+- **verification steps**:
+  1. Clean build: `./gradlew clean`
+  2. Full compilation: `./gradlew compileJava`
+  3. Check all affected modules
+  4. Validate dependency resolution
+- **blocking condition**: must pass 100% before proceeding
+
+#### 2. unit testing validation
+- **required command**: `./gradlew test`
+- **success criteria**: 100% test pass rate
+- **verification steps**:
+  1. Run all unit tests
+  2. Check test coverage (>80% required)
+  3. Validate no regression in existing functionality
+  4. Review test results for failures
+- **blocking condition**: must pass 100% before proceeding
+
+#### 3. change proposal documentation
+- **required content**:
+  1. Detailed description of planned changes
+  2. List of affected files and components
+  3. Risk assessment (low/medium/high)
+  4. Implementation timeline and effort estimate
+  5. Rollback strategy and test plan
+- **format**: Structured markdown document
+
+#### 4. explicit user approval
+- **required step**: Present change proposal to user
+- **approval methods**:
+  - Written confirmation in chat/dialog
+  - Explicit "approve" or "reject" response
+  - Approval timestamp documentation
+- **blocking condition**: Must receive explicit user approval before implementation
+
+### implementation phase (after approval)
+
+#### 5. approved implementation
+- **requirement**: Implement only approved changes
+- **process**:
+  1. Follow approved scope exactly
+  2. Adhere to coding standards
+  3. Update documentation simultaneously
+  4. Commit changes with clear messages
+
+#### 6. post-implementation validation
+- **required steps**:
+  1. Re-run compilation check
+  2. Re-run unit tests
+  3. Verify 100% success rate
+  4. Document actual vs planned changes
+
+### compliance requirements
+
+#### mandatory checks before any code change
+- [ ] `./gradlew compileJava` passes without errors
+- [ ] `./gradlew test` passes 100%
+- [ ] Change proposal documented and reviewed
+- [ ] Explicit user approval received
+- [ ] Rollback plan prepared
+
+#### prohibited actions
+- **NEVER** implement code changes without compilation verification
+- **NEVER** proceed without unit testing validation
+- **NEVER** implement without explicit user approval
+- **NEVER** deploy without all compliance checks passed
+
 ## conclusion
 
 this change management framework ensures:
@@ -468,3 +589,5 @@ by following this guide, the team can:
 - maintain system stability
 - provide clear audit trails
 - support business agility
+- **ensure code quality through mandatory validation**
+- **prevent unauthorized changes through explicit approval workflow**
