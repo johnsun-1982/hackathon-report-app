@@ -40,4 +40,14 @@ public class CurrentUserService {
             throw new RuntimeException("当前用户没有所需角色: " + requiredRole);
         }
     }
+    
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("未找到认证用户");
+        }
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用户不存在: " + username));
+    }
 }

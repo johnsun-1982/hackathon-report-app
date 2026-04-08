@@ -1,0 +1,60 @@
+<!-- Basic Angular Component Template -->
+<!-- Usage: Replace placeholders with your specific component requirements -->
+
+<div class="{{componentName}}">
+  <h2>{{ComponentTitle}}</h2>
+  
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    {{error}}
+    <button (click)="error = null" class="close-button">×</button>
+  </div>
+  
+  <!-- Loading Indicator -->
+  <div *ngIf="loading" class="loading-indicator">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+  
+  <!-- Form Section -->
+  <div class="form-section">
+    <h3>{{FormTitle}}</h3>
+    <form [formGroup]="{{formProperty}}" (ngSubmit)="onSubmit()">
+      {{formFieldsHtml}}
+      
+      <div class="form-actions">
+        <button type="submit" [disabled]="loading || {{formProperty}}.invalid" class="btn btn-primary">
+          <span *ngIf="!loading">Submit</span>
+          <span *ngIf="loading">Submitting...</span>
+        </button>
+        <button type="button" (click)="{{formProperty}}.reset()" class="btn btn-secondary" [disabled]="loading">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Data List Section -->
+  <div class="data-section">
+    <h3>{{ListTitle}}</h3>
+    
+    <div *ngIf="!loading && {{dataProperty}}.length === 0" class="no-data">
+      <p>No data available.</p>
+    </div>
+    
+    <div *ngIf="!loading && {{dataProperty}}.length > 0" class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            {{tableHeaders}}
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of {{dataProperty}}">
+            {{tableRows}}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

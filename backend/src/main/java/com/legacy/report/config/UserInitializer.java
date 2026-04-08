@@ -42,5 +42,14 @@ public class UserInitializer {
             checker.setRole("CHECKER");
             userRepository.save(checker);
         }
+
+        // Add second checker for 2-level approval
+        if (!userRepository.existsByUsername("checker2")) {
+            User checker2 = new User();
+            checker2.setUsername("checker2");
+            checker2.setPassword(passwordEncoder.encode("123456"));
+            checker2.setRole("CHECKER");
+            userRepository.save(checker2);
+        }
     }
 }

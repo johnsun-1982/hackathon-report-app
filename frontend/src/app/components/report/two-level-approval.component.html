@@ -1,0 +1,402 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h2>2层审批管理</h2>
+      
+      <!-- 权限提示 -->
+      <div class="alert alert-info" *ngIf="!canApproveLevel1 && !canApproveLevel2">
+        <i class="fas fa-info-circle"></i> 当前用户没有审批权限
+      </div>
+
+      <!-- 加载状态 -->
+      <div class="text-center" *ngIf="loading">
+        <div class="spinner-border" role="status">
+          <span class="sr-only">加载中...</span>
+        </div>
+        <p class="mt-2">正在加载待审批列表...</p>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="alert alert-danger" *ngIf="loadingError">
+        <i class="fas fa-exclamation-triangle"></i> {{ loadingError }}
+        <button type="button" class="btn btn-sm btn-outline-danger ml-2" (click)="refresh()">
+          <i class="fas fa-redo"></i> 重试
+        </button>
+      </div>
+
+      <!-- 主要内容区域 -->
+      <div *ngIf="!loading && !loadingError">
+        <!-- 标签页导航 -->
+        <ul class="nav nav-tabs mb-4">
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="activeTab === 'pending'" 
+               (click)="activeTab = 'pending'">
+              <i class="fas fa-clock"></i> 待审批
+              <span class="badge badge-warning ml-1" 
+                    *ngIf="pendingLevel1Runs.length + pendingLevel2Runs.length > 0">
+                {{ pendingLevel1Runs.length + pendingLevel2Runs.length }}
+              </span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="activeTab === 'history'" 
+               (click)="activeTab = 'history'">
+              <i class="fas fa-history"></i> 审批历史
+            </a>
+          </li>
+        </ul>
+
+        <!-- 待审批列表 -->
+        <div *ngIf="activeTab === 'pending'">
+          <!-- 级别过滤 -->
+          <div class="btn-group mb-3" *ngIf="canApproveLevel1 && canApproveLevel2">
+            <button type="button" class="btn btn-outline-primary" 
+                    [class.active]="activeLevel === 'all'"
+                    (click)="activeLevel = 'all'">
+              全部 ({{ pendingLevel1Runs.length + pendingLevel2Runs.length }})
+            </button>
+            <button type="button" class="btn btn-outline-primary" 
+                    [class.active]="activeLevel === 'level1'"
+                    (click)="activeLevel = 'level1'">
+              一级 ({{ pendingLevel1Runs.length }})
+            </button>
+            <button type="button" class="btn btn-outline-primary" 
+                    [class.active]="activeLevel === 'level2'"
+                    (click)="activeLevel = 'level2'">
+              二级 ({{ pendingLevel2Runs.length }})
+            </button>
+          </div>
+
+          <!-- 待审批列表 -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-list"></i> 
+                待审批列表
+                <small class="text-muted ml-2">
+                  {{ getFilteredPendingRuns().length }} 项
+                </small>
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div *ngIf="getFilteredPendingRuns().length === 0" class="text-center p-4 text-muted">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>暂无待审批项目</p>
+              </div>
+              
+              <div class="table-responsive" *ngIf="getFilteredPendingRuns().length > 0">
+                <table class="table table-hover mb-0">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>报表名称</th>
+                      <th>状态</th>
+                      <th>审批阶段</th>
+                      <th>提交人</th>
+                      <th>提交时间</th>
+                      <th>审批级别</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let run of getFilteredPendingRuns()" 
+                        [class.table-active]="selectedRun?.id === run.id"
+                        (click)="selectRun(run)" style="cursor: pointer;">
+                      <td>
+                        <strong>{{ run.reportName }}</strong>
+                        <br>
+                        <small class="text-muted">ID: {{ run.id }}</small>
+                      </td>
+                      <td>
+                        <span class="badge" [class]="getStatusBadgeClass(run.status)">
+                          {{ getStatusDisplay(run.status) }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge badge-info">
+                          {{ getApprovalStageDisplay(run.currentApprovalStage || 0) }}
+                        </span>
+                      </td>
+                      <td>{{ run.makerUsername }}</td>
+                      <td>{{ formatDateTime(run.submittedAt) }}</td>
+                      <td>
+                        <span class="badge badge-primary">
+                          {{ getApprovalLevelDisplay(run) }}
+                        </span>
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-sm btn-primary" 
+                                [disabled]="!canApprove(run)"
+                                (click)="selectRun(run); $event.stopPropagation()">
+                          <i class="fas fa-check"></i> 审批
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 审批历史 -->
+        <div *ngIf="activeTab === 'history'">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-history"></i> 我的审批历史
+                <small class="text-muted ml-2">
+                  {{ myApprovalHistory.length }} 项
+                </small>
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div *ngIf="myApprovalHistory.length === 0" class="text-center p-4 text-muted">
+                <i class="fas fa-history fa-3x mb-3"></i>
+                <p>暂无审批历史</p>
+              </div>
+              
+              <div class="table-responsive" *ngIf="myApprovalHistory.length > 0">
+                <table class="table table-hover mb-0">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>报表名称</th>
+                      <th>状态</th>
+                      <th>审批级别</th>
+                      <th>提交人</th>
+                      <th>审批时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let run of myApprovalHistory">
+                      <td>
+                        <strong>{{ run.reportName }}</strong>
+                        <br>
+                        <small class="text-muted">ID: {{ run.id }}</small>
+                      </td>
+                      <td>
+                        <span class="badge" [class]="getStatusBadgeClass(run.status)">
+                          {{ getStatusDisplay(run.status) }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge badge-secondary">
+                          {{ getApprovalLevelDisplay(run) }}
+                        </span>
+                      </td>
+                      <td>{{ run.makerUsername }}</td>
+                      <td>{{ formatDateTime(run.decidedAt) }}</td>
+                      <td>
+                        <div class="btn-group">
+                          <button type="button" class="btn btn-sm btn-info" 
+                                  (click)="selectRun(run)">
+                            <i class="fas fa-eye"></i> 详情
+                          </button>
+                          <button type="button" class="btn btn-sm btn-success" 
+                                  [disabled]="run.status !== 'L2Approved'"
+                                  (click)="exportReport(run)">
+                            <i class="fas fa-download"></i> 导出
+                          </button>
+                          <button type="button" class="btn btn-sm btn-warning" 
+                                  [disabled]="run.status !== 'L1Rejected' && run.status !== 'L2Rejected'"
+                                  (click)="reExecuteReport(run.id)">
+                            <i class="fas fa-redo"></i> 重新执行
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 审批详情面板 -->
+        <div class="row mt-4" *ngIf="selectedRun">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="fas fa-clipboard-check"></i> 审批详情
+                </h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" 
+                        (click)="selectedRun = null; approvalStatus = null; clearMessages()">
+                  <i class="fas fa-times"></i> 关闭
+                </button>
+              </div>
+              <div class="card-body">
+                <!-- 基本信息 -->
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <h6>报表信息</h6>
+                    <table class="table table-sm">
+                      <tr>
+                        <td><strong>报表名称:</strong></td>
+                        <td>{{ selectedRun.reportName }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>报表ID:</strong></td>
+                        <td>{{ selectedRun.id }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>提交人:</strong></td>
+                        <td>{{ selectedRun.makerUsername }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>当前状态:</strong></td>
+                        <td>
+                          <span class="badge" [class]="getStatusBadgeClass(selectedRun.status)">
+                            {{ getStatusDisplay(selectedRun.status) }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>审批阶段:</strong></td>
+                        <td>
+                          <span class="badge badge-info">
+                            {{ getApprovalStageDisplay(selectedRun.currentApprovalStage || 0) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <h6>审批状态</h6>
+                    <div *ngIf="approvalStatus">
+                      <!-- 一级审批信息 -->
+                      <div class="mb-3">
+                        <h6 class="text-primary">一级审批</h6>
+                        <div *ngIf="approvalStatus.firstApproval" class="border rounded p-3 bg-light">
+                          <p><strong>审批人:</strong> {{ approvalStatus.firstApproval.approver }}</p>
+                          <p><strong>审批时间:</strong> {{ formatDateTime(approvalStatus.firstApproval.time) }}</p>
+                          <p><strong>审批意见:</strong> {{ approvalStatus.firstApproval.comment || '无' }}</p>
+                        </div>
+                        <div *ngIf="!approvalStatus.firstApproval" class="text-muted">
+                          <i class="fas fa-clock"></i> 等待一级审批
+                        </div>
+                      </div>
+
+                      <!-- 二级审批信息 -->
+                      <div class="mb-3">
+                        <h6 class="text-success">二级审批</h6>
+                        <div *ngIf="approvalStatus.secondApproval" class="border rounded p-3 bg-light">
+                          <p><strong>审批人:</strong> {{ approvalStatus.secondApproval.approver }}</p>
+                          <p><strong>审批时间:</strong> {{ formatDateTime(approvalStatus.secondApproval.time) }}</p>
+                          <p><strong>审批意见:</strong> {{ approvalStatus.secondApproval.comment || '无' }}</p>
+                        </div>
+                        <div *ngIf="!approvalStatus.secondApproval" class="text-muted">
+                          <i class="fas fa-clock"></i> 等待二级审批
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 审批操作 -->
+                <div *ngIf="canApprove(selectedRun)" class="border-top pt-3">
+                  <h6>审批操作</h6>
+                  
+                  <!-- 消息提示 -->
+                  <div class="alert alert-success" *ngIf="approvalMessage">
+                    <i class="fas fa-check-circle"></i> {{ approvalMessage }}
+                  </div>
+                  
+                  <div class="alert alert-danger" *ngIf="approvalError">
+                    <i class="fas fa-exclamation-triangle"></i> {{ approvalError }}
+                  </div>
+
+                  <form (ngSubmit)="submitApproval()">
+                    <div class="form-group">
+                      <label>审批决策:</label>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="approve" id="approve" 
+                               [(ngModel)]="approvalRequest.approve" [value]="true">
+                        <label class="form-check-label" for="approve">
+                          <i class="fas fa-check text-success"></i> 批准
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="approve" id="reject" 
+                               [(ngModel)]="approvalRequest.approve" [value]="false">
+                        <label class="form-check-label" for="reject">
+                          <i class="fas fa-times text-danger"></i> 拒绝
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="comment">审批意见:</label>
+                      <textarea class="form-control" id="comment" rows="3" 
+                                [(ngModel)]="approvalRequest.comment"
+                                placeholder="请输入审批意见（拒绝时必填）">
+                      </textarea>
+                      <small class="form-text text-muted">
+                        拒绝审批时必须填写详细意见
+                      </small>
+                    </div>
+
+                    <div class="form-group">
+                      <button type="submit" class="btn btn-primary" 
+                              [disabled]="submittingApproval">
+                        <i class="fas fa-paper-plane" *ngIf="!submittingApproval"></i>
+                        <span class="spinner-border spinner-border-sm" *ngIf="submittingApproval"></span>
+                        {{ submittingApproval ? '提交中...' : '提交审批' }}
+                      </button>
+                      
+                      <button type="button" class="btn btn-outline-secondary ml-2" 
+                              (click)="clearMessages()">
+                        <i class="fas fa-eraser"></i> 清除消息
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- 审计轨迹 -->
+                <div class="border-top pt-3 mt-3">
+                  <h6>审计轨迹</h6>
+                  
+                  <div class="alert alert-danger" *ngIf="auditError">
+                    <i class="fas fa-exclamation-triangle"></i> {{ auditError }}
+                  </div>
+
+                  <div *ngIf="auditTrail.length > 0">
+                    <div class="timeline">
+                      <div *ngFor="let event of auditTrail" class="timeline-item">
+                        <div class="timeline-marker">
+                          <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="timeline-content">
+                          <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                              <strong>{{ event.eventType }}</strong>
+                              <br>
+                              <small class="text-muted">
+                                操作人: {{ event.actorUsername }} ({{ event.actorRole }})
+                              </small>
+                              <div *ngIf="event.comment" class="mt-1">
+                                <small>{{ event.comment }}</small>
+                              </div>
+                            </div>
+                            <small class="text-muted">
+                              {{ formatDateTime(event.eventTime) }}
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="auditTrail.length === 0 && !auditError" class="text-muted">
+                    暂无审计轨迹
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

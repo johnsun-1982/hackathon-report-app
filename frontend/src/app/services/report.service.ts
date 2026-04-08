@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 
 interface Report {
@@ -25,6 +25,14 @@ export interface ReportRun {
   generatedAt: string;
   submittedAt?: string;
   decidedAt?: string;
+  currentApprovalStage?: number;
+  firstApproverUsername?: string;
+  firstApprovalTime?: string;
+  firstApprovalComment?: string;
+  secondApproverUsername?: string;
+  secondApprovalTime?: string;
+  secondApprovalComment?: string;
+  approvalLevel?: number;
 }
 
 export interface ReportAuditEvent {
@@ -117,5 +125,34 @@ export class ReportService {
     return this.http.get(`${this.apiUrl}/report-runs/${runId}/export`, {
       responseType: 'blob'
     });
+  }
+
+  // 2层审批相关接口
+  getPendingApprovals(level?: number): Observable<any> {
+    let params = new HttpParams();
+    if (level !== undefined) {
+      params = params.set('level', level.toString());
+    }
+    return this.http.get(`${this.apiUrl}/reports/pending-approval`, { params });
+  }
+
+  getApprovalStatus(runId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/reports/runs/${runId}/approval-status`);
+  }
+
+  firstLevelApproval(runId: number, request: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reports/runs/${runId}/first-approval`, request);
+  }
+
+  secondLevelApproval(runId: number, request: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reports/runs/${runId}/second-approval`, request);
+  }
+
+  getMyApprovalHistory(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/reports/my-approval-history`);
+  }
+
+  reExecuteReport(runId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reports/runs/${runId}/re-execute`, {});
   }
 }

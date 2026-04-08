@@ -98,6 +98,7 @@
   "cli": {
     "schematicCollections": [
       "@angular/schematics"
-    ]
+    ],
+    "analytics": "ac897ae4-de78-415b-ad80-be67d02eb4d8"
   }
 }
